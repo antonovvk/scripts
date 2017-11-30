@@ -1,6 +1,6 @@
 #!/usr/bin/python
 
-import sys, json, argparse
+import sys, simplejson, argparse
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
@@ -12,20 +12,28 @@ if __name__ == '__main__':
     args = parser.parse_args()
 
     def dump(data):
-        print json.dumps(data, indent=None if args.one_line else 4, sort_keys=True)
+        print simplejson.dumps(data, indent=None if args.one_line else 4, sort_keys=True)
 
     arr = []
     with sys.stdin as file:
         if args.whole:
-            data = json.load(file)
+            try:
+                data = simplejson.load(file)
+            except simplejson.decoder.JSONDecodeError as e:
+                sys.stderr.write('Invalid json: {}\n'.format(e))
+                exit(1)
             if args.values:
                 for v in data if isinstance(data, list) else data.values():
                     dump(v)
             else:
                 dump(data)
         else:
-            for line in file:
-                data = json.loads(line)
+            for n, line in enumerate(file):
+                try:
+                    data = simplejson.loads(line)
+                except simplejson.decoder.JSONDecodeError as e:
+                    sys.stderr.write('Invalid json at line {}: {}\n'.format(n, e))
+                    exit(1)
                 if args.array:
                     arr.append(data)
                 else:
